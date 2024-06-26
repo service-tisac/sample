@@ -1,11 +1,26 @@
-from fastapi import FastAPI
+from flask import Flask
 
-app = FastAPI()
+app = Flask(__name__)
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
+@app.route('/hello')
+def hello():
+    return 'Привет'
 
-@app.get("/greet/{name}")
-def greet(name: str):
-    return {"message": f"Hello, {name} inside the container i hope."}
+@app.route('/goodbye')
+def goodbye():
+    return 'До свидания'
+
+@app.route('/goodmorning')
+def goodmorning():
+    return 'Доброе утро'
+
+@app.route('/goodevening')
+def goodevening():
+    return 'Добрый вечер'
+
+@app.route('/goodnight')
+def goodnight():
+    return 'Спокойной ночи'
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0',port=8888)
