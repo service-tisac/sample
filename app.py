@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from flask import Flask, request, jsonify
+from pydantic import BaseModel, ValidationError
+from flask_pydantic import validate
 import joblib
 import pandas as pd
 import numpy as np
@@ -7,8 +8,8 @@ from sklearn.datasets import load_iris
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 
-# Initialize FastAPI app
-app = FastAPI()
+# Initialize Flask app
+app = Flask(__name__)
 
 # Load the Iris dataset and train a simple Logistic Regression model
 iris = load_iris()
@@ -36,26 +37,28 @@ class PredictionInput(BaseModel):
     feature4: float
 
 # Root endpoint
-@app.get("/")
+@app.route("/", methods=["GET"])
 def read_root():
-    return {"message": "Welcome to the FastAPI ML Model API"}
+    return jsonify({"message": "Welcome to the Flask ML Model API"})
 
 # Prediction endpoint
-@app.post("/predict/")
-def predict(input_data: PredictionInput):
+@app.route("/predict/", methods=["POST"])
+@validate()
+def predict(body: PredictionInput):
     try:
         # Convert input data to DataFrame
-        data = pd.DataFrame([input_data.dict()])
+        data = pd.DataFrame([body.dict()])
 
         # Perform prediction
         prediction = model.predict(data)
         probability = model.predict_proba(data).max()
 
-        return {"prediction": int(prediction[0]), "probability": probability}
+        return jsonify({"prediction": int(prediction[0]), "probability": probability})
+    except ValidationError as e:
+        return jsonify(e.errors()), 400
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return jsonify({"detail": str(e)}), 500
 
 # Run the application
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    app.run(host="0.0.0.0", port=8000)
