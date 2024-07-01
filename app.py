@@ -1,6 +1,4 @@
 from flask import Flask, request, jsonify
-from pydantic import BaseModel, ValidationError
-from flask_pydantic import validate
 import joblib
 import pandas as pd
 import numpy as np
@@ -29,13 +27,6 @@ joblib.dump(model, "model.pkl")
 # Load the model
 model = joblib.load("model.pkl")
 
-# Define input data model
-class PredictionInput(BaseModel):
-    feature1: float
-    feature2: float
-    feature3: float
-    feature4: float
-
 # Root endpoint
 @app.route("/", methods=["GET"])
 def read_root():
@@ -43,19 +34,28 @@ def read_root():
 
 # Prediction endpoint
 @app.route("/predict/", methods=["POST"])
-@validate()
-def predict(body: PredictionInput):
+def predict():
     try:
+        # Parse input data
+        input_data = request.json
+        feature1 = input_data.get("feature1")
+        feature2 = input_data.get("feature2")
+        feature3 = input_data.get("feature3")
+        feature4 = input_data.get("feature4")
+
+        # Check if all features are provided
+        if None in [feature1, feature2, feature3, feature4]:
+            return jsonify({"error": "All features must be provided"}), 400
+
         # Convert input data to DataFrame
-        data = pd.DataFrame([body.dict()])
+        data = pd.DataFrame([[feature1, feature2, feature3, feature4]],
+                            columns=["feature1", "feature2", "feature3", "feature4"])
 
         # Perform prediction
         prediction = model.predict(data)
         probability = model.predict_proba(data).max()
 
         return jsonify({"prediction": int(prediction[0]), "probability": probability})
-    except ValidationError as e:
-        return jsonify(e.errors()), 400
     except Exception as e:
         return jsonify({"detail": str(e)}), 500
 
