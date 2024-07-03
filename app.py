@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 import joblib
 import pandas as pd
 import numpy as np
@@ -6,8 +7,8 @@ from sklearn.datasets import load_iris
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 
-# Initialize Flask app
-app = Flask(__name__)
+# Initialize FastAPI app
+app = FastAPI()
 
 # Load the Iris dataset and train a simple Logistic Regression model
 iris = load_iris()
@@ -27,38 +28,34 @@ joblib.dump(model, "model.pkl")
 # Load the model
 model = joblib.load("model.pkl")
 
+# Define input data model
+class PredictionInput(BaseModel):
+    feature1: float
+    feature2: float
+    feature3: float
+    feature4: float
+
 # Root endpoint
-@app.route("/", methods=["GET"])
+@app.get("/")
 def read_root():
-    return jsonify({"message": "Welcome to the Flask ML Model API"})
+    return {"message": "Welcome to the FastAPI ML Model API"}
 
 # Prediction endpoint
-@app.route("/predict/", methods=["POST"])
-def predict():
+@app.post("/predict/")
+def predict(input_data: PredictionInput):
     try:
-        # Parse input data
-        input_data = request.json
-        feature1 = input_data.get("feature1")
-        feature2 = input_data.get("feature2")
-        feature3 = input_data.get("feature3")
-        feature4 = input_data.get("feature4")
-
-        # Check if all features are provided
-        if None in [feature1, feature2, feature3, feature4]:
-            return jsonify({"error": "All features must be provided"}), 400
-
         # Convert input data to DataFrame
-        data = pd.DataFrame([[feature1, feature2, feature3, feature4]],
-                            columns=["feature1", "feature2", "feature3", "feature4"])
+        data = pd.DataFrame([input_data.dict()])
 
         # Perform prediction
         prediction = model.predict(data)
         probability = model.predict_proba(data).max()
 
-        return jsonify({"prediction": int(prediction[0]), "probability": probability})
+        return {"prediction": int(prediction[0]), "probability": probability}
     except Exception as e:
-        return jsonify({"detail": str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Run the application
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8888)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
