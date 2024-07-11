@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.datasets import load_iris
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
+import os
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -38,7 +39,7 @@ class PredictionInput(BaseModel):
 # Root endpoint
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the FastAPI ML Model API"}
+    return {"message": os.getenv("WELCOME_MESSAGE")}
 
 # Prediction endpoint
 @app.post("/predict/")
@@ -54,6 +55,7 @@ def predict(input_data: PredictionInput):
         return {"prediction": int(prediction[0]), "probability": probability}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # Run the application
 if __name__ == "__main__":
